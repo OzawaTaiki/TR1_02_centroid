@@ -18,7 +18,7 @@ void Box::Initialize(const Vector2& _pos)
 
 	collisionDir = { 0,0 };
 
-	rotate = 0.0f;
+	rotate = 1.0f;
 	mass = 1.0f;
 
 	verties[0] = {
@@ -119,12 +119,27 @@ void Box::CollisonWithField()
 
 }
 
+void Box::GetVertiesTransform(Vector2 _verties[])
+{
+	_verties[0] = verties[0].transform;
+	_verties[1] = verties[1].transform;
+	_verties[2] = verties[2].transform;
+	_verties[3] = verties[3].transform;
+}
+
 void Box::Rotate()
 {
 	for (Verties& vertex : verties)
 	{
 		vertex.transform = RotateVector(vertex.constTransform, rotate);
 	}
+
+
+	Novice::DrawQuad(static_cast<int>(pos.x + verties[0].transform.x), static_cast<int>(pos.y + verties[0].transform.y),
+					 static_cast<int>(pos.x + verties[1].transform.x), static_cast<int>(pos.y + verties[1].transform.y),
+					 static_cast<int>(pos.x + verties[2].transform.x), static_cast<int>(pos.y + verties[2].transform.y),
+					 static_cast<int>(pos.x + verties[3].transform.x), static_cast<int>(pos.y + verties[3].transform.y),
+					 0, 0, 1, 1, rectGH, color);
 
 }
 

@@ -35,6 +35,7 @@ public:
 	Vector2 GetPosition() { return pos; };
 	Vector2 GetSize() { return size; };
 	Vector2 GetVelocity() { return velocity; };
+	void GetVertiesTransform(Vector2 _verties[]);
 
 	///
 	///**************************************
