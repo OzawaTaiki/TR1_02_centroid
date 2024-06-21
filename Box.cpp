@@ -73,7 +73,6 @@ void Box::SetCollisionDir(const Vector2& _col)
 
 void Box::CollisonWithField()
 {
-
 	Vector2 nextPos = pos;
 	nextPos.x += velocity.x;
 	nextPos.y += velocity.y;
