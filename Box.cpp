@@ -1,6 +1,7 @@
 ﻿#include "Box.h"
-#include<Novice.h>
+#include <Novice.h>
 #include <imgui.h>
+#include <func.h>
 
 Box::Box(int _mapchipiSize, uint32_t _color) : kMapchipSize(static_cast<float>(_mapchipiSize)), color(_color)
 {
@@ -21,18 +22,22 @@ void Box::Initialize(const Vector2& _pos)
 	mass = 1.0f;
 
 	verties[0] = {
+		.constTransform = {-size.x / 2.0f,-size.y / 2.0f},
 		.transform = {-size.x / 2.0f,-size.y / 2.0f},
 		.weight = mass / 4.0f
 	};
 	verties[1] = {
+		.constTransform = {size.x / 2.0f,-size.y / 2.0f },
 		.transform = {size.x / 2.0f,-size.y / 2.0f },
 		.weight = mass / 4.0f
 	};
 	verties[2] = {
+		.constTransform = { -size.x / 2.0f,size.y / 2.0f},
 		.transform = { -size.x / 2.0f,size.y / 2.0f},
 		.weight = mass / 4.0f
 	};
 	verties[3] = {
+		.constTransform = {size.x / 2.0f,size.y / 2.0f},
 		.transform = {size.x / 2.0f,size.y / 2.0f},
 		.weight = mass / 4.0f
 	};
@@ -44,12 +49,15 @@ void Box::Update()
 {
 	collisionDir = { 0,0 };
 
-	Gravity();
 
 	ImGui::Begin("Box");
 	ImGui::DragFloat2("position", &pos.x, 0.1f);
 	ImGui::DragFloat2("Velocity", &velocity.x, 0.01f);
+	ImGui::SliderAngle("angle", &rotate);
 	ImGui::End();
+
+	Gravity();
+	Rotate();
 
 	pos.x += velocity.x;
 	pos.y += velocity.y;
@@ -57,6 +65,9 @@ void Box::Update()
 
 void Box::Draw()
 {
+	Novice::DrawBox(static_cast<int>(pos.x - size.x / 2.0f), static_cast<int>(pos.y - size.x / 2.0f),
+					static_cast<int>(size.x - 1), static_cast<int>(size.y - 1), 0.0f, BLACK, kFillModeWireFrame);
+
 	Novice::DrawQuad(static_cast<int>(pos.x + verties[0].transform.x), static_cast<int>(pos.y + verties[0].transform.y),
 					 static_cast<int>(pos.x + verties[1].transform.x), static_cast<int>(pos.y + verties[1].transform.y),
 					 static_cast<int>(pos.x + verties[2].transform.x), static_cast<int>(pos.y + verties[2].transform.y),
@@ -104,6 +115,15 @@ void Box::CollisonWithField()
 		}
 		collisionDir.y = 0;
 
+	}
+
+}
+
+void Box::Rotate()
+{
+	for (Verties& vertex : verties)
+	{
+		vertex.transform = RotateVector(vertex.constTransform, rotate);
 	}
 
 }

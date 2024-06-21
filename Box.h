@@ -6,8 +6,9 @@
 
 struct Verties
 {
-	Vector2 transform;	//ローカル座標
-	float weight;		//点における重さの比率
+	Vector2 constTransform;	//固定 ローカル座標
+	Vector2 transform;		//回転したローカル座標
+	float weight;			//点における重さの比率
 };
 
 class Box {
@@ -39,6 +40,7 @@ public:
 	///**************************************
 
 private:
+	void Rotate();
 	void CalculateCentroid();
 	void Gravity();
 
