@@ -37,6 +37,7 @@ public:
 	Vector2 GetVelocity() { return velocity; };
 	void GetVertiesTransform(Vector2 _verties[]);
 
+
 	///
 	///**************************************
 
@@ -44,7 +45,7 @@ private:
 	void Rotate();
 	void CalculateCentroid();
 	void Gravity();
-
+	void SortVertexArray();
 
 	Vector2 pos;
 	Vector2 size;

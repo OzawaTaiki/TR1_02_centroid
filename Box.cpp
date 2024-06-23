@@ -2,6 +2,8 @@
 #include <Novice.h>
 #include <imgui.h>
 #include <func.h>
+#define _USE_MATH_DEFINES
+#include <cmath>
 
 Box::Box(int _mapchipiSize, uint32_t _color) : kMapchipSize(static_cast<float>(_mapchipiSize)), color(_color)
 {
@@ -18,7 +20,7 @@ void Box::Initialize(const Vector2& _pos)
 
 	collisionDir = { 0,0 };
 
-	rotate = 1.0f;
+	rotate = float(-1.0f / 4.0f * M_PI);
 	mass = 1.0f;
 
 	verties[0] = {
@@ -50,14 +52,21 @@ void Box::Update()
 	collisionDir = { 0,0 };
 
 
+	Gravity();
+	Rotate();
+
 	ImGui::Begin("Box");
 	ImGui::DragFloat2("position", &pos.x, 0.1f);
 	ImGui::DragFloat2("Velocity", &velocity.x, 0.01f);
 	ImGui::SliderAngle("angle", &rotate);
+	if (ImGui::Button("angleReset"))
+		rotate = -1.0f / 4.0f * (float)M_PI;
+	ImGui::Text("vertex\n 0_x: %+.2f,\t0_y: %+.2f\n 1_x: %+.2f,\t1_y: %+.2f\n 2_x: %+.2f,\t2_y: %+.2f\n 3_x: %+.2f,\t3_y: %+.2f\n",
+				verties[0].transform.x, verties[0].transform.y,
+				verties[1].transform.x, verties[1].transform.y,
+				verties[2].transform.x, verties[2].transform.y,
+				verties[3].transform.x, verties[3].transform.y);
 	ImGui::End();
-
-	Gravity();
-	Rotate();
 
 	pos.x += velocity.x;
 	pos.y += velocity.y;
@@ -68,13 +77,14 @@ void Box::Draw()
 	Novice::DrawBox(static_cast<int>(pos.x - size.x / 2.0f), static_cast<int>(pos.y - size.x / 2.0f),
 					static_cast<int>(size.x - 1), static_cast<int>(size.y - 1), 0.0f, BLACK, kFillModeWireFrame);
 
+
 	Novice::DrawQuad(static_cast<int>(pos.x + verties[0].transform.x), static_cast<int>(pos.y + verties[0].transform.y),
 					 static_cast<int>(pos.x + verties[1].transform.x), static_cast<int>(pos.y + verties[1].transform.y),
 					 static_cast<int>(pos.x + verties[2].transform.x), static_cast<int>(pos.y + verties[2].transform.y),
 					 static_cast<int>(pos.x + verties[3].transform.x), static_cast<int>(pos.y + verties[3].transform.y),
 					 0, 0, 1, 1, rectGH, color);
 
-	Novice::DrawEllipse(static_cast<int>(pos.x), static_cast<int>(pos.y), 5, 5, 0, WHITE, kFillModeSolid);
+	//Novice::DrawEllipse(static_cast<int>(pos.x), static_cast<int>(pos.y), 5, 5, 0, WHITE, kFillModeSolid);
 }
 
 void Box::SetCollisionDir(const Vector2& _col)
@@ -133,14 +143,7 @@ void Box::Rotate()
 	{
 		vertex.transform = RotateVector(vertex.constTransform, rotate);
 	}
-
-
-	Novice::DrawQuad(static_cast<int>(pos.x + verties[0].transform.x), static_cast<int>(pos.y + verties[0].transform.y),
-					 static_cast<int>(pos.x + verties[1].transform.x), static_cast<int>(pos.y + verties[1].transform.y),
-					 static_cast<int>(pos.x + verties[2].transform.x), static_cast<int>(pos.y + verties[2].transform.y),
-					 static_cast<int>(pos.x + verties[3].transform.x), static_cast<int>(pos.y + verties[3].transform.y),
-					 0, 0, 1, 1, rectGH, color);
-
+	SortVertexArray();
 }
 
 void Box::CalculateCentroid()
@@ -149,7 +152,7 @@ void Box::CalculateCentroid()
 	float sumWeight = 0;
 	int count = 0;
 
-	for (Verties v : verties)
+	for (Verties& v : verties)
 	{
 		count++;
 		sum.x += v.weight * v.transform.x;
@@ -171,4 +174,122 @@ void Box::Gravity()
 	velocity.y += accelelation.y;
 	if (velocity.y > kMaxVelocity)
 		velocity.y = kMaxVelocity;
+}
+
+void Box::SortVertexArray()
+{
+	// yがちいさいのとおおきいのを０と３へ
+	// ほかでｘが小さいのと大きいのを１と２へ
+
+	int yupIndex[2] = { 0 };
+	int ydownIndex[2] = { 0 };
+	int count = 0;
+	Verties	copyVerties[4];
+	memcpy(copyVerties, verties, sizeof(Verties) * 4);
+	bool clear[4] = { false };//配列格納フラグ
+
+	for (int i = 0; i < 4; i++)
+	{
+		//頂点が上にあるインデックスを把握
+		if (copyVerties[i].transform.y < 0)
+			yupIndex[count++] = i;
+	}
+
+	int index = -1;
+	if ((int)copyVerties[yupIndex[0]].transform.y < (int)copyVerties[yupIndex[1]].transform.y)
+	{
+		index = yupIndex[0];
+	}
+	else if ((int)copyVerties[yupIndex[0]].transform.y > (int)copyVerties[yupIndex[1]].transform.y)
+	{
+		index = yupIndex[1];
+	}
+
+	if (index != -1)
+	{
+		//２つを比べて上にある頂点を配列の0へ格納
+		verties[0] = copyVerties[index];
+		clear[0] = true;
+
+		index = index == yupIndex[0] ? yupIndex[1] : yupIndex[0];
+
+		//下にあるものが左にあるなら２へ格納
+		if ((int)copyVerties[index].transform.x < 0)
+		{
+			verties[2] = copyVerties[index];
+			clear[2] = true;
+		}
+		//そうじゃなかった１へ
+		else
+		{
+			verties[1] = copyVerties[index];
+			clear[1] = true;
+		}
+
+
+	}
+
+	count = 0;
+	for (int i = 0; i < 4; i++)
+	{
+		if (!clear[i])
+		{
+			//頂点が上にあるインデックスを把握
+			if ((int)copyVerties[i].transform.y > 0)
+				ydownIndex[count++] = i;
+		}
+	}
+
+	index = -1;
+	//大きいほうをindexへ
+	if ((int)copyVerties[ydownIndex[0]].transform.y > (int)copyVerties[ydownIndex[1]].transform.y)
+	{
+		index = ydownIndex[0];
+	}
+	else if ((int)copyVerties[ydownIndex[0]].transform.y < (int)copyVerties[ydownIndex[1]].transform.y)
+	{
+		index = ydownIndex[1];
+	}
+
+	if (index != -1)
+	{
+		//２つを比べて下にある頂点を配列の0へ格納
+		verties[3] = copyVerties[index];
+		clear[3] = true;
+
+		index = index == ydownIndex[0] ? ydownIndex[1] : ydownIndex[0];
+
+		//上にあるものが左にあるなら２へ格納
+		if ((int)copyVerties[index].transform.x < 0)
+		{
+			verties[2] = copyVerties[index];
+			clear[2] = true;
+		}
+		//そうじゃなかった１へ
+		else
+		{
+			verties[1] = copyVerties[index];
+			clear[1] = true;
+		}
+	}
+
+	// indexが-1じゃないということは回転している
+	// フラグはすべてtrueになっているはず
+	if (index != -1)
+		return;
+
+
+	// 回転しているけど０radと等しいとき
+	// フラグがすべてfalseのはず
+	for (int i = 0; i < 4; i++)
+	{
+		if (clear[i])
+			continue;
+
+		if (i == 3)
+		{
+			//assert(false);
+		}
+	}
+
 }
