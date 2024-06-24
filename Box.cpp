@@ -20,7 +20,7 @@ void Box::Initialize(const Vector2& _pos)
 
 	collisionDir = { 0,0 };
 
-	rotate = float(-1.0f / 4.0f * M_PI);
+	rotate = 0.37f;
 	mass = 1.0f;
 
 	verties[0] = {
@@ -60,7 +60,11 @@ void Box::Update()
 	ImGui::DragFloat2("Velocity", &velocity.x, 0.01f);
 	ImGui::SliderAngle("angle", &rotate);
 	if (ImGui::Button("angleReset"))
-		rotate = -1.0f / 4.0f * (float)M_PI;
+		rotate = -1.0f / 2.0f * (float)M_PI;
+	if (ImGui::Button("271"))
+		rotate = 3.0001f / 2.0f * (float)M_PI;
+	if (ImGui::Button("270"))
+		rotate = 3.0f / 2.0f * (float)M_PI;
 	ImGui::Text("vertex\n 0_x: %+.2f,\t0_y: %+.2f\n 1_x: %+.2f,\t1_y: %+.2f\n 2_x: %+.2f,\t2_y: %+.2f\n 3_x: %+.2f,\t3_y: %+.2f\n",
 				verties[0].transform.x, verties[0].transform.y,
 				verties[1].transform.x, verties[1].transform.y,
@@ -139,6 +143,11 @@ void Box::GetVertiesTransform(Vector2 _verties[])
 
 void Box::Rotate()
 {
+	if (rotate >= 2.0f * (float)M_PI ||
+		rotate <= -2.0f * (float)M_PI)
+	{
+		rotate = 0.0f;
+	}
 	for (Verties& vertex : verties)
 	{
 		vertex.transform = RotateVector(vertex.constTransform, rotate);
@@ -181,6 +190,87 @@ void Box::SortVertexArray()
 	// yがちいさいのとおおきいのを０と３へ
 	// ほかでｘが小さいのと大きいのを１と２へ
 
+	Verties	copyVerties[4];
+	memcpy(copyVerties, verties, sizeof(Verties) * 4);
+	bool clear[4] = { true,false ,false ,false };				//配列格納フラグ
+	size_t xMin = 0,
+		xMax = 0,
+		yMin = 0,
+		yMax = 0;
+
+	for (int i = 0; i < 4; i++)
+	{
+		if ((int)copyVerties[i].transform.y < (int)copyVerties[yMin].transform.y)
+		{
+			yMin = i;
+			clear[i] = true;
+		}
+		else if ((int)copyVerties[i].transform.y > (int)copyVerties[yMax].transform.y)
+		{
+			yMax = i;
+			clear[i] = true;
+		}
+
+
+		if ((int)copyVerties[i].transform.x < (int)copyVerties[xMin].transform.x)
+		{
+			xMin = i;
+			clear[i] = true;
+		}
+		else if ((int)copyVerties[i].transform.x > (int)copyVerties[xMax].transform.x)
+		{
+			xMax = i;
+			clear[i] = true;
+		}
+	}
+
+	// 値がかぶっているものがあるとき
+	if (!clear[0] || !clear[1] || !clear[2] || !clear[3])
+	{
+		for (const Verties& vertex : copyVerties)
+		{
+			//左
+			if (vertex.transform.x <= 0)
+			{
+				//上
+				if (vertex.transform.y < 0)
+				{
+					verties[0] = vertex;
+				}
+				//下
+				else if (vertex.transform.y > 0)
+				{
+					verties[2] = vertex;
+				}
+			}
+			//右
+			else if (vertex.transform.x > 0)
+			{
+				//上
+				if (vertex.transform.y < 0)
+				{
+					verties[1] = vertex;
+				}
+				//下
+				else if (vertex.transform.y > 0)
+				{
+					verties[3] = vertex;
+				}
+			}
+		}
+	}
+
+	else
+	{
+		verties[0] = copyVerties[yMin];
+		verties[1] = copyVerties[xMin];
+		verties[2] = copyVerties[xMax];
+		verties[3] = copyVerties[yMax];
+	}
+
+
+
+	/* 過去のもの
 	int yupIndex[2] = { 0 };
 	int ydownIndex[2] = { 0 };
 	int count = 0;
@@ -203,6 +293,12 @@ void Box::SortVertexArray()
 	else if ((int)copyVerties[yupIndex[0]].transform.y > (int)copyVerties[yupIndex[1]].transform.y)
 	{
 		index = yupIndex[1];
+	}
+	else
+	{
+		//90度単位で回転してるときここにくる
+		//TODO: これ直す
+		//４５度のときのもやってね
 	}
 
 	if (index != -1)
@@ -250,6 +346,11 @@ void Box::SortVertexArray()
 	{
 		index = ydownIndex[1];
 	}
+	else
+	{
+		//90度単位で回転してるときここにくる
+		//TODO: これ直す
+	}
 
 	if (index != -1)
 	{
@@ -291,5 +392,5 @@ void Box::SortVertexArray()
 			//assert(false);
 		}
 	}
-
+	*/
 }
