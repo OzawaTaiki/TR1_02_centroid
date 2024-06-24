@@ -61,18 +61,21 @@ bool Mapchip::CheckCollision()
 	halfSize.y /= 2.0f;
 	Vector2 velocity = box[0]->GetVelocity();
 
+	Vector2 Verties[4];
+	box[0]->GetVertiesTransform(Verties);
 	Vector2 hit{ 0,0 };
 
 	if (velocity.x != 0)
 	{
-		if ((map[int((position.y - halfSize.y) / kMapchipSize)][int((position.x - halfSize.x + velocity.x) / kMapchipSize)] != 0 ||///左上
-			map[int((position.y + halfSize.y - 1) / kMapchipSize)][int((position.x - halfSize.x + velocity.x) / kMapchipSize)] != 0) &&///左下
+		//TODO: sizeをvertiesに変更したところまで 向きによって任意のvertexを得る関数をつくり，判定をとる
+		if ((map[int((position.y - Verties[0].y) / kMapchipSize)][int((position.x - Verties[0].x + velocity.x) / kMapchipSize)] != 0 ||///左上
+			map[int((position.y + Verties[2].y - 1) / kMapchipSize)][int((position.x - Verties[0].x + velocity.x) / kMapchipSize)] != 0) &&///左下
 			velocity.x < 0)///左に動いている
 		{
 			hit.x = -1;
 		}
-		else if ((map[int((position.y - halfSize.y) / kMapchipSize)][int((position.x + halfSize.x - 1 + velocity.x) / kMapchipSize)] != 0 ||///右上
-				 map[int((position.y + halfSize.y - 1) / kMapchipSize)][int((position.x + halfSize.x - 1 + velocity.x) / kMapchipSize)] != 0) &&///右下
+		else if ((map[int((position.y - Verties[0].y) / kMapchipSize)][int((position.x + Verties[1].x - 1 + velocity.x) / kMapchipSize)] != 0 ||///右上
+				 map[int((position.y + Verties[2].y - 1) / kMapchipSize)][int((position.x + Verties[1].x - 1 + velocity.x) / kMapchipSize)] != 0) &&///右下
 				 velocity.x > 0)///右に動いている
 		{
 			hit.x = 1;

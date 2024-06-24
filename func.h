@@ -36,3 +36,4 @@ Vector2 getCrossPos(const Vector2& a, const Vector2& b, const Vector2& c, const 
 Vector2 Bezier(const Vector2& p0, const Vector2& p1, const Vector2& p2, float t);
 
 Vector2 lerp(Vector2 min, Vector2 max, float t);
+
