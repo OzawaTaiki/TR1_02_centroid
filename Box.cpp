@@ -54,17 +54,15 @@ void Box::Update()
 
 	Gravity();
 	Rotate();
+	CalculateCentroid();
 
 	ImGui::Begin("Box");
 	ImGui::DragFloat2("position", &pos.x, 0.1f);
 	ImGui::DragFloat2("Velocity", &velocity.x, 0.01f);
 	ImGui::SliderAngle("angle", &rotate);
 	if (ImGui::Button("angleReset"))
-		rotate = -1.0f / 2.0f * (float)M_PI;
-	if (ImGui::Button("271"))
-		rotate = 3.0001f / 2.0f * (float)M_PI;
-	if (ImGui::Button("270"))
-		rotate = 3.0f / 2.0f * (float)M_PI;
+		rotate = 0.0f;
+	ImGui::DragFloat("Weight", &verties[0].weight, 0.01f);
 	ImGui::Text("vertex\n 0_x: %+.2f,\t0_y: %+.2f\n 1_x: %+.2f,\t1_y: %+.2f\n 2_x: %+.2f,\t2_y: %+.2f\n 3_x: %+.2f,\t3_y: %+.2f\n",
 				verties[0].transform.x, verties[0].transform.y,
 				verties[1].transform.x, verties[1].transform.y,
@@ -88,7 +86,7 @@ void Box::Draw()
 					 static_cast<int>(pos.x + verties[3].transform.x), static_cast<int>(pos.y + verties[3].transform.y),
 					 0, 0, 1, 1, rectGH, color);
 
-	//Novice::DrawEllipse(static_cast<int>(pos.x), static_cast<int>(pos.y), 5, 5, 0, WHITE, kFillModeSolid);
+	Novice::DrawEllipse(static_cast<int>(pos.x + centroid.x), static_cast<int>(pos.y + centroid.y), 5, 5, 0, 0xaaaaaaff, kFillModeSolid);
 }
 
 void Box::SetCollisionDir(const Vector2& _col)
@@ -107,11 +105,11 @@ void Box::CollisonWithField()
 		//左がfieldに当たった
 		if (collisionDir.x < 0)
 		{
-			pos.x = static_cast<int>((nextPos.x - size.x / 2.0f) / kMapchipSize + 1) * kMapchipSize + size.x / 2.0f;
+			pos.x = static_cast<int>((nextPos.x + verties[2].transform.x) / kMapchipSize + 1) * kMapchipSize - verties[2].transform.x;
 		}
 		else
 		{
-			pos.x = static_cast<int>((nextPos.x + size.x / 2.0f + 0.5f) / kMapchipSize) * kMapchipSize - size.x / 2.0f;
+			pos.x = static_cast<int>((nextPos.x + verties[1].transform.x + 0.5f) / kMapchipSize) * kMapchipSize - verties[1].transform.x;
 		}
 		collisionDir.x = 0;
 	}
@@ -120,17 +118,15 @@ void Box::CollisonWithField()
 		//上がfieldに当たった
 		if (collisionDir.y < 0)
 		{
-			pos.y = static_cast<int>((nextPos.y - size.y / 2.0f) / kMapchipSize + 1) * kMapchipSize + size.y / 2.0f;
+			pos.y = static_cast<int>((nextPos.y + verties[0].transform.y) / kMapchipSize + 1) * kMapchipSize - verties[0].transform.y;
 		}
 		else
 		{
-			pos.y = static_cast<int>(int(nextPos.y + size.y / 2.0f + 0.5f) / kMapchipSize + 0.25f) * kMapchipSize - size.y / 2.0f;
+			pos.y = static_cast<int>(int(nextPos.y + verties[3].transform.y + 0.5f) / kMapchipSize + 0.25f) * kMapchipSize - verties[3].transform.y;
 			velocity.y = 0;
 		}
 		collisionDir.y = 0;
-
 	}
-
 }
 
 void Box::GetVertiesTransform(Vector2 _verties[])
@@ -164,14 +160,19 @@ void Box::CalculateCentroid()
 	for (Verties& v : verties)
 	{
 		count++;
-		sum.x += v.weight * v.transform.x;
-		sum.y += v.weight * v.transform.y;
+		sum.x += v.weight * v.constTransform.x;
+		sum.y += v.weight * v.constTransform.y;
 		sumWeight += v.weight;
 	}
 
 	centroid.x = sum.x / static_cast<float>(count);
 	centroid.y = sum.y / static_cast<float>(count);
 	mass = sumWeight;
+
+	centroid.x = centroid.x > size.x / 2.0f ? size.x / 2.0f : (centroid.x < -size.x / 2.0f ? -size.x / 2.0f : centroid.x);
+	centroid.y = centroid.y > size.y / 2.0f ? size.y / 2.0f : (centroid.y < -size.y / 2.0f ? -size.y / 2.0f : centroid.y);
+
+	centroid = RotateVector(centroid, rotate);
 
 	return;
 
@@ -263,12 +264,10 @@ void Box::SortVertexArray()
 	else
 	{
 		verties[0] = copyVerties[yMin];
-		verties[1] = copyVerties[xMin];
-		verties[2] = copyVerties[xMax];
+		verties[1] = copyVerties[xMax];
+		verties[2] = copyVerties[xMin];
 		verties[3] = copyVerties[yMax];
 	}
-
-
 
 	/* 過去のもの
 	int yupIndex[2] = { 0 };
