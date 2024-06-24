@@ -22,8 +22,6 @@ void Mapchip::Initialize()
 			}
 		}
 	}
-
-
 }
 
 void Mapchip::Update()
@@ -67,15 +65,16 @@ bool Mapchip::CheckCollision()
 
 	if (velocity.x != 0)
 	{
-		//TODO: sizeをvertiesに変更したところまで 向きによって任意のvertexを得る関数をつくり，判定をとる
-		if ((map[int((position.y - Verties[0].y) / kMapchipSize)][int((position.x - Verties[0].x + velocity.x) / kMapchipSize)] != 0 ||///左上
-			map[int((position.y + Verties[2].y - 1) / kMapchipSize)][int((position.x - Verties[0].x + velocity.x) / kMapchipSize)] != 0) &&///左下
+		//TODO: 頂点でしか判定取れいない
+		// 辺でも判定とれるように
+		if ((map[int((position.y + Verties[0].y) / kMapchipSize)][int((position.x + Verties[0].x + velocity.x) / kMapchipSize)] != 0 ||///左上
+			map[int((position.y + Verties[2].y - 1) / kMapchipSize)][int((position.x + Verties[2].x + velocity.x) / kMapchipSize)] != 0) &&///左下
 			velocity.x < 0)///左に動いている
 		{
 			hit.x = -1;
 		}
-		else if ((map[int((position.y - Verties[0].y) / kMapchipSize)][int((position.x + Verties[1].x - 1 + velocity.x) / kMapchipSize)] != 0 ||///右上
-				 map[int((position.y + Verties[2].y - 1) / kMapchipSize)][int((position.x + Verties[1].x - 1 + velocity.x) / kMapchipSize)] != 0) &&///右下
+		else if ((map[int((position.y + Verties[1].y) / kMapchipSize)][int((position.x + Verties[1].x - 1 + velocity.x) / kMapchipSize)] != 0 ||///右上
+				 map[int((position.y + Verties[3].y - 1) / kMapchipSize)][int((position.x + Verties[3].x - 1 + velocity.x) / kMapchipSize)] != 0) &&///右下
 				 velocity.x > 0)///右に動いている
 		{
 			hit.x = 1;
@@ -85,15 +84,15 @@ bool Mapchip::CheckCollision()
 	}
 	if (velocity.y != 0)
 	{
-		if ((map[int((position.y - halfSize.y + velocity.y) / kMapchipSize)][int((position.x - halfSize.x) / kMapchipSize)] != 0 ||///左上
-			map[int((position.y - halfSize.y + velocity.y) / kMapchipSize)][int((position.x + halfSize.x - 1) / kMapchipSize)] != 0) &&///右上
-			velocity.y < 0)///左に動いている
+		if ((map[int((position.y + Verties[0].y + velocity.y) / kMapchipSize)][int((position.x + Verties[0].x) / kMapchipSize)] != 0 ||///左上
+			map[int((position.y + Verties[1].y + velocity.y) / kMapchipSize)][int((position.x + Verties[1].x - 1) / kMapchipSize)] != 0) &&///右上
+			velocity.y < 0)///上に動いている
 		{
 			hit.y = -1;
 		}
-		else if ((map[int((position.y + halfSize.y + velocity.y - 1) / kMapchipSize)][int((position.x - halfSize.x) / kMapchipSize)] != 0 ||///左下
-				 map[int((position.y + halfSize.y + velocity.y - 1) / kMapchipSize)][int((position.x + halfSize.x - 1) / kMapchipSize)] != 0) &&///右下
-				 velocity.y > 0)///右に動いている
+		else if ((map[int((position.y + Verties[2].y + velocity.y - 1) / kMapchipSize)][int((position.x + Verties[2].x) / kMapchipSize)] != 0 ||///左下
+				 map[int((position.y + Verties[3].y + velocity.y - 1) / kMapchipSize)][int((position.x + Verties[3].x - 1) / kMapchipSize)] != 0) &&///右下
+				 velocity.y > 0)///下に動いている
 		{
 			hit.y = 1;
 		}
