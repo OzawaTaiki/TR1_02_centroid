@@ -2,7 +2,7 @@
 
 #include <Vector2.h>
 #include <cstdint>
-
+#include <vector>
 
 struct Verties
 {
@@ -17,7 +17,7 @@ public:
 	Box(int _mapchipSize, uint32_t _color);
 	~Box() {};
 
-	void Initialize(const Vector2& _pos);
+	void Initialize(const Vector2& _pos, const Vector2& _size = { -1,-1 });
 	void Update();
 	void Draw();
 
@@ -26,9 +26,11 @@ public:
 	/// </summary>
 	/// <param name="_col">-方向からなら-</param>
 	void SetCollisionDir(const Vector2& _col);
+	void SetPosition(const Vector2& _pos);
 
 	void CollisonWithField();
 
+	void RegistHitPos(Vector2 _hitPos);
 	///*************************************
 	///		ゲッター
 
@@ -36,7 +38,6 @@ public:
 	Vector2 GetSize() { return size; };
 	Vector2 GetVelocity() { return velocity; };
 	void GetVertiesTransform(Vector2 _verties[]);
-
 
 	///
 	///**************************************
@@ -46,6 +47,9 @@ private:
 	void CalculateCentroid();
 	void Gravity();
 	void SortVertexArray();
+	Vector2 FindRotateCenter();
+
+	void ShowImGui();
 
 	Vector2 pos;
 	Vector2 size;
@@ -59,6 +63,9 @@ private:
 	float kMapchipSize;
 	int rectGH;
 	uint32_t color;
+	bool isGravity;
+
+	std::vector<Vector2> hitPosWithField;
 
 	//回転
 	float rotate;
@@ -68,4 +75,9 @@ private:
 	float mass;
 
 	Verties verties[4]{};
+
+	Vector2 vectorOfStoV[4];
+	float addRotate = 0;
+
+
 };

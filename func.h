@@ -1,5 +1,6 @@
 #pragma once
 #include <Vector2.h>
+#include <cstdint>
 
 float lerp(float& t, float max, float min);
 
@@ -37,3 +38,8 @@ Vector2 Bezier(const Vector2& p0, const Vector2& p1, const Vector2& p2, float t)
 
 Vector2 lerp(Vector2 min, Vector2 max, float t);
 
+void DrawAABB(int _xmin, int _ymin, int _xmax, int _ymax, uint32_t _color);
+
+Vector2 operator+(const Vector2& _vector1, const Vector2& _vector2);
+Vector2 operator-(const Vector2& _vector1, const Vector2& _vector2);
+Vector2 operator*(const Vector2& _vector1, float _scalar);

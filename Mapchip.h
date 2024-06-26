@@ -11,8 +11,11 @@ public:
 	void Update();
 	void Draw();
 
+	void ShowImGui();
+
 private:
 
+	void DrawGrid();
 	bool CheckCollision();
 
 	const char* path[64] = {
@@ -23,4 +26,8 @@ private:
 	const int kMapchipSize = 64;
 
 	std::vector<Box*> box;
+
+	bool ISDrawDrid ;
+	uint32_t gridColor;
+	float color[4];
 };
