@@ -1,26 +1,30 @@
 ﻿#include "Box.h"
 #include <Novice.h>
 #include <imgui.h>
-#include <func.h>
-#define _USE_MATH_DEFINES
+#include "func.h"
 #include <cmath>
+#include <string>
+#include <numbers>
 
 Box::Box(int _mapchipiSize, uint32_t _color) : kMapchipSize(static_cast<float>(_mapchipiSize)), color(_color)
 {
 	rectGH = Novice::LoadTexture("white1x1.png");
 }
 
-void Box::Initialize(const Vector2& _pos)
+void Box::Initialize(const Vector2& _pos, const Vector2& _size)
 {
 	pos = _pos;
 
-	size = { static_cast<float>(kMapchipSize),static_cast<float> (kMapchipSize) };
+	if (_size.x == -1)
+		size = { static_cast<float>(kMapchipSize),static_cast<float> (kMapchipSize) };
+	else
+		size = _size;
 	velocity = { 0.0f,0.0f };
 	accelelation = { 0.0f,0.5f };
 
 	collisionDir = { 0,0 };
 
-	rotate = 0.37f;
+	rotate = 0.0f;
 	mass = 1.0f;
 
 	verties[0] = {
@@ -44,6 +48,9 @@ void Box::Initialize(const Vector2& _pos)
 		.weight = mass / 4.0f
 	};
 
+	isGravity = true;
+	addRotate = 0;
+
 	CalculateCentroid();
 }
 
@@ -51,33 +58,28 @@ void Box::Update()
 {
 	collisionDir = { 0,0 };
 
-
-	Gravity();
+	rotate += addRotate;
+	if (isGravity)
+		Gravity();
 	Rotate();
 	CalculateCentroid();
 
-	ImGui::Begin("Box");
-	ImGui::DragFloat2("position", &pos.x, 0.1f);
-	ImGui::DragFloat2("Velocity", &velocity.x, 0.01f);
-	ImGui::SliderAngle("angle", &rotate);
-	if (ImGui::Button("angleReset"))
-		rotate = 0.0f;
-	ImGui::DragFloat("Weight", &verties[0].weight, 0.01f);
-	ImGui::Text("vertex\n 0_x: %+.2f,\t0_y: %+.2f\n 1_x: %+.2f,\t1_y: %+.2f\n 2_x: %+.2f,\t2_y: %+.2f\n 3_x: %+.2f,\t3_y: %+.2f\n",
-				verties[0].transform.x, verties[0].transform.y,
-				verties[1].transform.x, verties[1].transform.y,
-				verties[2].transform.x, verties[2].transform.y,
-				verties[3].transform.x, verties[3].transform.y);
-	ImGui::End();
+	ShowImGui();
+
 
 	pos.x += velocity.x;
 	pos.y += velocity.y;
+
+	hitPosWithField.clear();
+
 }
 
 void Box::Draw()
 {
-	Novice::DrawBox(static_cast<int>(pos.x - size.x / 2.0f), static_cast<int>(pos.y - size.x / 2.0f),
+	Novice::DrawBox(static_cast<int>(pos.x - size.x / 2.0f), static_cast<int>(pos.y - size.y / 2.0f),
 					static_cast<int>(size.x - 1), static_cast<int>(size.y - 1), 0.0f, BLACK, kFillModeWireFrame);
+	Novice::DrawBox(static_cast<int>(pos.x - size.y / 2.0f), static_cast<int>(pos.y - size.x / 2.0f),
+					static_cast<int>(size.y - 1), static_cast<int>(size.x - 1), 0.0f, BLACK, kFillModeWireFrame);
 
 
 	Novice::DrawQuad(static_cast<int>(pos.x + verties[0].transform.x), static_cast<int>(pos.y + verties[0].transform.y),
@@ -86,12 +88,24 @@ void Box::Draw()
 					 static_cast<int>(pos.x + verties[3].transform.x), static_cast<int>(pos.y + verties[3].transform.y),
 					 0, 0, 1, 1, rectGH, color);
 
-	Novice::DrawEllipse(static_cast<int>(pos.x + centroid.x), static_cast<int>(pos.y + centroid.y), 5, 5, 0, 0xaaaaaaff, kFillModeSolid);
+	Novice::DrawEllipse(static_cast<int>(pos.x + centroid.x), static_cast<int>(pos.y + centroid.y), 5, 5, 0, 0xaaaaaaaa, kFillModeSolid);
+	Novice::DrawEllipse(static_cast<int>(pos.x), static_cast<int>(pos.y), 5, 5, 0, 0xaa, kFillModeSolid);
+
+	for (const Vector2& p : hitPosWithField)
+	{
+		Novice::DrawEllipse(static_cast<int>(p.x), static_cast<int>(p.y), 5, 5, 0, 0xaa, kFillModeSolid);
+	}
 }
 
 void Box::SetCollisionDir(const Vector2& _col)
 {
 	collisionDir = _col;
+}
+
+void Box::SetPosition(const Vector2& _pos)
+{
+	pos = _pos;
+	velocity.y = 0;
 }
 
 void Box::CollisonWithField()
@@ -116,17 +130,22 @@ void Box::CollisonWithField()
 	if (collisionDir.y != 0)
 	{
 		//上がfieldに当たった
-		if (collisionDir.y < 0)
+		if (collisionDir.y < -0.5f)
 		{
 			pos.y = static_cast<int>((nextPos.y + verties[0].transform.y) / kMapchipSize + 1) * kMapchipSize - verties[0].transform.y;
 		}
-		else
+		else if (collisionDir.y > 0.5f)
 		{
 			pos.y = static_cast<int>(int(nextPos.y + verties[3].transform.y + 0.5f) / kMapchipSize + 0.25f) * kMapchipSize - verties[3].transform.y;
-			velocity.y = 0;
 		}
+		velocity.y = 0;
 		collisionDir.y = 0;
 	}
+}
+
+void Box::RegistHitPos(Vector2 _hitPos)
+{
+	hitPosWithField.push_back(_hitPos);
 }
 
 void Box::GetVertiesTransform(Vector2 _verties[])
@@ -139,15 +158,64 @@ void Box::GetVertiesTransform(Vector2 _verties[])
 
 void Box::Rotate()
 {
-	if (rotate >= 2.0f * (float)M_PI ||
-		rotate <= -2.0f * (float)M_PI)
+	if (rotate >= 2.0f * (float)std::numbers::pi ||
+		rotate <= -2.0f * (float)std::numbers::pi)
 	{
 		rotate = 0.0f;
 	}
-	for (Verties& vertex : verties)
+
+	//// p3を求める
+	//Vector2 rotateCenter = FindRotateCenter();
+	//Vector2 p3 = rotateCenter - pos;			//posを基準としたローカル座標
+
+	//// 03 13 23を求める
+	//// 03 13 12を回転
+	//Vector2 rotateSubVerties[4];
+	//for (int i = 0; i < 4; i++)
+	//{
+	//	Vector2 subVerties[4];
+	//	subVerties[i] = verties[i].transform - p3;
+	//	rotateSubVerties[i] = RotateVector(subVerties[i], rotate);
+	//}
+
+	//// p3の逆ベクトル ip3 を回転 p3rとする
+	//Vector2 ip3 = p3 * -1.0f;
+	//Vector2 p3r = RotateVector(ip3, rotate);
+
+	//// p3の逆と p3rの差分ベクトル s をもとめる
+	//Vector2 subVec = p3r - ip3;
+
+	//// p3 + s de pos
+	//pos = pos + subVec;
+
+	//// p3+03たちでローカル座標へ変換
+	//p3 = rotateCenter - pos;
+	//for (int i = 0; i < 4; i++)
+	//{
+	//	verties[i].transform = p3 + rotateSubVerties[i];
+	//}
+
+
+	bool isSame = false;
+	for (int i = 0; i < 4; i++)
 	{
-		vertex.transform = RotateVector(vertex.constTransform, rotate);
+		verties[i].transform = RotateVector(verties[i].constTransform, rotate);
+
+		if ((int)verties[i].transform.x == (int)verties[i].constTransform.y ||
+			(int)verties[i].transform.y == (int)verties[i].constTransform.x)
+			isSame = true;
 	}
+
+	if (isSame &&
+		size.x != size.y)
+	{
+		for (int i = 0; i < 4; i++)
+			verties[i].transform = { verties[i].constTransform.y,verties[i].constTransform.x };
+	}
+
+	//頂点基準に回転させた頂点たちを中心基準に戻す
+	//基準頂点から中心へのベクトルを計算，回転
+
 	SortVertexArray();
 }
 
@@ -269,127 +337,76 @@ void Box::SortVertexArray()
 		verties[3] = copyVerties[yMax];
 	}
 
-	/* 過去のもの
-	int yupIndex[2] = { 0 };
-	int ydownIndex[2] = { 0 };
-	int count = 0;
-	Verties	copyVerties[4];
-	memcpy(copyVerties, verties, sizeof(Verties) * 4);
-	bool clear[4] = { false };//配列格納フラグ
+}
 
-	for (int i = 0; i < 4; i++)
+Vector2 Box::FindRotateCenter()
+{
+	Vector2 min = { 0,(float)INFINITE };
+	if (!hitPosWithField.empty())
 	{
-		//頂点が上にあるインデックスを把握
-		if (copyVerties[i].transform.y < 0)
-			yupIndex[count++] = i;
-	}
-
-	int index = -1;
-	if ((int)copyVerties[yupIndex[0]].transform.y < (int)copyVerties[yupIndex[1]].transform.y)
-	{
-		index = yupIndex[0];
-	}
-	else if ((int)copyVerties[yupIndex[0]].transform.y > (int)copyVerties[yupIndex[1]].transform.y)
-	{
-		index = yupIndex[1];
+		for (Vector2 p : hitPosWithField)
+		{
+			if (min.y > p.y)
+				min = p;
+		}
+		return min;
 	}
 	else
+		return verties[3].transform + pos;
+
+}
+
+void Box::ShowImGui()
+{
+	ImGui::Begin("Box");
+	ImGui::DragFloat2("position", &pos.x, 0.1f);
+	ImGui::DragFloat2("Velocity", &velocity.x, 0.01f);
+	ImGui::SameLine();
+	if (ImGui::Button("Reset"))
+		velocity = { 0,0 };
+	ImGui::SliderAngle("angle", &rotate);
+	ImGui::DragFloat("angle_f", &rotate, 0.0001f);
+	ImGui::DragFloat("add", &addRotate, 0.001f);
+	if (ImGui::Button("ResetAngle"))
 	{
-		//90度単位で回転してるときここにくる
-		//TODO: これ直す
-		//４５度のときのもやってね
+		rotate = 0.0f;
+		addRotate = 0;
 	}
-
-	if (index != -1)
+	ImGui::SameLine();
+	if (ImGui::Button("180"))
+		rotate = (float)std::numbers::pi;
+	ImGui::SameLine();
+	if (ImGui::Button("90"))
+		rotate = 0.5f * (float)std::numbers::pi;
+	ImGui::SameLine();
+	if (ImGui::Button("85"))
+		rotate = 0.47f * (float)std::numbers::pi;
+	ImGui::Checkbox("Gravity", &isGravity);
+	ImGui::DragFloat("Weight", &verties[0].weight, 0.01f);
+	ImGui::DragFloat2("Size", &size.x, 0.01f);
+	if (ImGui::Button("ReSize"))
 	{
-		//２つを比べて上にある頂点を配列の0へ格納
-		verties[0] = copyVerties[index];
-		clear[0] = true;
-
-		index = index == yupIndex[0] ? yupIndex[1] : yupIndex[0];
-
-		//下にあるものが左にあるなら２へ格納
-		if ((int)copyVerties[index].transform.x < 0)
-		{
-			verties[2] = copyVerties[index];
-			clear[2] = true;
-		}
-		//そうじゃなかった１へ
-		else
-		{
-			verties[1] = copyVerties[index];
-			clear[1] = true;
-		}
-
-
+		Initialize(pos, size);
 	}
-
-	count = 0;
-	for (int i = 0; i < 4; i++)
+	//std::string label = "Transform";
+	//for (int i = 0; i < 4; i++)
+	//{
+	//	ImGui::DragFloat2((label + std::to_string(i)).c_str(), &verties[i].constTransform.x, 0.1f);
+	//}
+	if (ImGui::TreeNode("Vertex"))
 	{
-		if (!clear[i])
-		{
-			//頂点が上にあるインデックスを把握
-			if ((int)copyVerties[i].transform.y > 0)
-				ydownIndex[count++] = i;
-		}
+		ImGui::Text("0_x: %+.2f,\t0_y: %+.2f\n 1_x: %+.2f,\t1_y: %+.2f\n 2_x: %+.2f,\t2_y: %+.2f\n 3_x: %+.2f,\t3_y: %+.2f\n",
+					verties[0].transform.x, verties[0].transform.y,
+					verties[1].transform.x, verties[1].transform.y,
+					verties[2].transform.x, verties[2].transform.y,
+					verties[3].transform.x, verties[3].transform.y);
+		ImGui::TreePop();
 	}
-
-	index = -1;
-	//大きいほうをindexへ
-	if ((int)copyVerties[ydownIndex[0]].transform.y > (int)copyVerties[ydownIndex[1]].transform.y)
+	if (ImGui::TreeNode("HitPos"))
 	{
-		index = ydownIndex[0];
+		for (const Vector2& v : hitPosWithField)
+			ImGui::Text("x : %.2f,y : %.2f", v.x, v.y);
+		ImGui::TreePop();
 	}
-	else if ((int)copyVerties[ydownIndex[0]].transform.y < (int)copyVerties[ydownIndex[1]].transform.y)
-	{
-		index = ydownIndex[1];
-	}
-	else
-	{
-		//90度単位で回転してるときここにくる
-		//TODO: これ直す
-	}
-
-	if (index != -1)
-	{
-		//２つを比べて下にある頂点を配列の0へ格納
-		verties[3] = copyVerties[index];
-		clear[3] = true;
-
-		index = index == ydownIndex[0] ? ydownIndex[1] : ydownIndex[0];
-
-		//上にあるものが左にあるなら２へ格納
-		if ((int)copyVerties[index].transform.x < 0)
-		{
-			verties[2] = copyVerties[index];
-			clear[2] = true;
-		}
-		//そうじゃなかった１へ
-		else
-		{
-			verties[1] = copyVerties[index];
-			clear[1] = true;
-		}
-	}
-
-	// indexが-1じゃないということは回転している
-	// フラグはすべてtrueになっているはず
-	if (index != -1)
-		return;
-
-
-	// 回転しているけど０radと等しいとき
-	// フラグがすべてfalseのはず
-	for (int i = 0; i < 4; i++)
-	{
-		if (clear[i])
-			continue;
-
-		if (i == 3)
-		{
-			//assert(false);
-		}
-	}
-	*/
+	ImGui::End();
 }

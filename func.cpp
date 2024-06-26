@@ -1,5 +1,6 @@
 #include "func.h"
 #include <cmath>
+#include <Novice.h>
 
 float lerp(float& t, float max, float min)
 {
@@ -14,6 +15,29 @@ Vector2 lerp(Vector2 min, Vector2 max, float t)
 	result.y = (1.0f - t) * min.y + t * max.y;
 
 	return result;
+}
+
+void DrawAABB(int _xmin, int _ymin, int _xmax, int _ymax, uint32_t _color)
+{
+	int lengthX = _xmax - _xmin;
+	int lengthY = _ymax - _ymin;
+
+	Novice::DrawBox(_xmin, _ymin, lengthX, lengthY, 0, _color, kFillModeSolid);
+}
+
+Vector2 operator+(const Vector2& _vector1, const Vector2& _vector2)
+{
+	return Vector2(Add(_vector2, _vector1));
+}
+
+Vector2 operator-(const Vector2& _vector1, const Vector2& _vector2)
+{
+	return Vector2(Subtract(_vector2, _vector1));
+}
+
+Vector2 operator*(const Vector2& _vector1, float _scalar)
+{
+	return Vector2(Multiply(_vector1, _scalar));
 }
 
 Vector2 Bezier(const Vector2& p0, const Vector2& p1, const Vector2& p2, float t)
