@@ -156,96 +156,82 @@ bool Mapchip::CheckCollision()
 
 		//どこの頂点も当たっていなかったとき
 		//辺の判定をとりたい↓
-		if (hitDirection.x == 0 && hitDirection.y == 0)
+		int xMax = int((nextPos.x + Verties[1].x) / kMapchipSize);
+		int xMin = int((nextPos.x + Verties[2].x) / kMapchipSize);
+
+		int yMin = int((nextPos.y + Verties[0].y) / kMapchipSize);
+		int yMax = int((nextPos.y + Verties[3].y) / kMapchipSize);
+
+		DrawAABB((int)(xMin * kMapchipSize), (int)(yMin * kMapchipSize), (int)(xMax * kMapchipSize + 64), (int)(yMax * kMapchipSize + 64), 0xa0000080);
+
+		Vector2 crossPos;
+		for (int i = xMin; i < xMax; i++)
 		{
-			int xMax = int((nextPos.x + Verties[1].x) / kMapchipSize);
-			int xMin = int((nextPos.x + Verties[2].x) / kMapchipSize);
-
-			int yMin = int((nextPos.y + Verties[0].y) / kMapchipSize);
-			int yMax = int((nextPos.y + Verties[3].y) / kMapchipSize);
-
-			DrawAABB((int)(xMin * kMapchipSize), (int)(yMin * kMapchipSize), (int)(xMax * kMapchipSize + 64), (int)(yMax * kMapchipSize + 64), 0xa0000080);
-
-			Vector2 crossPos;
-			for (int i = xMin; i < xMax; i++)
+			if (map[yMin][i] != map[yMin][i + 1])
 			{
-				if (map[yMin][i] != map[yMin][i + 1])
-				{
-					hit = { float(i + 1) * kMapchipSize ,(float)yMin * kMapchipSize };
-
-				}
-
-				if (map[yMax][i] != map[yMax][i + 1])
-				{
-
-					//下の頂点より左
-					if (Verties[3].x + position.x > float(i + 1) * kMapchipSize)
-					{
-						hit = { float(i + 1) * kMapchipSize ,(float)yMax * kMapchipSize };
-						//23ベクトルとマップチップの交点を取る
-						Vector2 max = { hit.x,hit.y + kMapchipSize };
-						crossPos = getCrossPos(position + Verties[2], position + Verties[3], hit, max);
-						Novice::DrawEllipse(int(crossPos.x), int(crossPos.y), 3, 3, 0, 255, kFillModeSolid);
-
-						//交点がブロックのとき
-						if (map[int(crossPos.y / kMapchipSize)][int((crossPos.x - 1) / kMapchipSize)] != 0)
-						{
-							//box中心と交点の差分ベクトルを求める
-							Vector2 boxCenterToCross = crossPos - position;
-							Vector2 afterPos = crossPos;
-							afterPos.x = int(crossPos.x / kMapchipSize) * kMapchipSize - boxCenterToCross.x;
-							afterPos.y = int(crossPos.y / kMapchipSize) * kMapchipSize - boxCenterToCross.y;
-							nBox->SetPosition(afterPos);
-
-							//交点yはpos-boxCenterToCross
-							crossPos.y = afterPos.y - boxCenterToCross.y;
-							nBox->RegistHitPos(crossPos);
-
-
-						}
-					}
-					else if (Verties[3].x + position.x < float(i + 1) * kMapchipSize)
-					{
-						hit = { float(i + 1) * kMapchipSize ,(float)yMax * kMapchipSize };
-
-						//23ベクトルとマップチップの交点を取る
-						Vector2 max = { hit.x,hit.y+kMapchipSize };
-						//Novice::DrawEllipse(int(hit.x), int(hit.y), 10, 10, 0, 255, kFillModeSolid);
-						crossPos = getCrossPos(position + Verties[1], position + Verties[3], hit, max);
-						Novice::DrawEllipse(int(crossPos.x), int(crossPos.y), 3, 3, 0, 255, kFillModeSolid);
-
-						//交点がブロックのとき
-						if (map[int(crossPos.y / kMapchipSize)][int((crossPos.x + 1) / kMapchipSize)] != 0)
-						{
-							//box中心と交点の差分ベクトルを求める
-							Vector2 boxCenterToCross = crossPos - position;
-							Vector2 afterPos = crossPos;
-							afterPos.x = int(crossPos.x / kMapchipSize) * kMapchipSize - boxCenterToCross.x;
-							afterPos.y = int(crossPos.y / kMapchipSize) * kMapchipSize - boxCenterToCross.y;
-							nBox->SetPosition(afterPos);
-
-							//交点yはpos-boxCenterToCross
-							crossPos.y = afterPos.y - boxCenterToCross.y;
-							nBox->RegistHitPos(crossPos);
-
-
-						}
-
-					}
-				}
-
+				hit = { float(i + 1) * kMapchipSize ,(float)yMin * kMapchipSize };
 			}
-			//Vector2 edgeOf1to3 = Verties[3] - Verties[1];	//下と右の点
-			//Vector2 edgeOf2to3 = Verties[3] - Verties[2];	//下と左の点
 
-			//辺とマップチップとの接触点を求めたい
-			//map[verteirs[0]][1],map[0][2]または
-			//map[verteirs[3]][1],map[3][2]のはんいにブロックがあるとき
+			if (map[yMax][i] != map[yMax][i + 1])
+			{
+				//下の頂点より左
+				if (Verties[3].x + position.x > float(i + 1) * kMapchipSize)
+				{
+					hit = { float(i + 1) * kMapchipSize ,(float)yMax * kMapchipSize };
+					//23ベクトルとマップチップの交点を取る
+					Vector2 max = { hit.x,hit.y + kMapchipSize };
+					crossPos = getCrossPos(position + Verties[2], position + Verties[3], hit, max);
+					Novice::DrawEllipse(int(crossPos.x), int(crossPos.y), 3, 3, 0, 255, kFillModeSolid);
 
+					//交点がブロックのとき
+					if (map[int(crossPos.y / kMapchipSize)][int((crossPos.x - 1) / kMapchipSize)] != 0)
+					{
+						//box中心と交点の差分ベクトルを求める
+						Vector2 boxCenterToCross = crossPos - position;
+						Vector2 afterPos = crossPos;
+						afterPos.x = int(crossPos.x / kMapchipSize) * kMapchipSize - boxCenterToCross.x;
+						afterPos.y = int(crossPos.y / kMapchipSize) * kMapchipSize - boxCenterToCross.y;
+						nBox->SetPosition(afterPos);
+
+						//交点yはpos-boxCenterToCross
+						crossPos.y = afterPos.y + boxCenterToCross.y;
+						nBox->RegistHitPos(crossPos);
+
+
+					}
+				}
+				else if (Verties[3].x + position.x < float(i + 1) * kMapchipSize)
+				{
+					hit = { float(i + 1) * kMapchipSize ,(float)yMax * kMapchipSize };
+
+					//23ベクトルとマップチップの交点を取る
+					Vector2 max = { hit.x,hit.y + kMapchipSize };
+					//Novice::DrawEllipse(int(hit.x), int(hit.y), 10, 10, 0, 255, kFillModeSolid);
+					crossPos = getCrossPos(position + Verties[1], position + Verties[3], hit, max);
+					Novice::DrawEllipse(int(crossPos.x), int(crossPos.y), 3, 3, 0, 255, kFillModeSolid);
+
+					//交点がブロックのとき
+					if (map[int(crossPos.y / kMapchipSize)][int((crossPos.x + 1) / kMapchipSize)] != 0)
+					{
+						//box中心と交点の差分ベクトルを求める
+						Vector2 boxCenterToCross = crossPos - position;
+						Vector2 afterPos = crossPos;
+						afterPos.x = int(crossPos.x / kMapchipSize) * kMapchipSize - boxCenterToCross.x;
+						afterPos.y = int(crossPos.y / kMapchipSize) * kMapchipSize - boxCenterToCross.y;
+						nBox->SetPosition(afterPos);
+
+						//交点yはpos-boxCenterToCross
+						crossPos.y = afterPos.y + boxCenterToCross.y;
+						nBox->RegistHitPos(crossPos);
+
+
+					}
+
+				}
+			}
 
 		}
 	}
-
-
 	return false;
+
 }

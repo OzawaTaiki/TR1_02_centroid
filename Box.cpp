@@ -24,7 +24,9 @@ void Box::Initialize(const Vector2& _pos, const Vector2& _size)
 
 	collisionDir = { 0,0 };
 
-	rotate = 0.0f;
+	angle = 0.0f;
+	preAngle = 0.0f;
+	angleVelocity = 0.0f;
 	mass = 1.0f;
 
 	verties[0] = {
@@ -49,22 +51,22 @@ void Box::Initialize(const Vector2& _pos, const Vector2& _size)
 	};
 
 	isGravity = true;
-	addRotate = 0;
 
 	CalculateCentroid();
 }
 
 void Box::Update()
 {
+	preAngle = angle;
+	ShowImGui();
 	collisionDir = { 0,0 };
 
-	rotate += addRotate;
+	angle += angleVelocity;
 	if (isGravity)
 		Gravity();
 	Rotate();
 	CalculateCentroid();
 
-	ShowImGui();
 
 
 	pos.x += velocity.x;
@@ -95,6 +97,8 @@ void Box::Draw()
 	{
 		Novice::DrawEllipse(static_cast<int>(p.x), static_cast<int>(p.y), 5, 5, 0, 0xaa, kFillModeSolid);
 	}
+
+
 }
 
 void Box::SetCollisionDir(const Vector2& _col)
@@ -145,7 +149,9 @@ void Box::CollisonWithField()
 
 void Box::RegistHitPos(Vector2 _hitPos)
 {
-	hitPosWithField.push_back(_hitPos);
+	Vector2 regist = _hitPos;
+	regist.y = int((_hitPos.y + 1) / kMapchipSize) * kMapchipSize;
+	hitPosWithField.push_back(regist);
 }
 
 void Box::GetVertiesTransform(Vector2 _verties[])
@@ -158,45 +164,45 @@ void Box::GetVertiesTransform(Vector2 _verties[])
 
 void Box::Rotate()
 {
-	if (rotate >= 2.0f * (float)std::numbers::pi ||
-		rotate <= -2.0f * (float)std::numbers::pi)
+	if (angle >= 2.0f * (float)std::numbers::pi ||
+		angle <= -2.0f * (float)std::numbers::pi)
 	{
-		rotate = 0.0f;
+		angle = 0.0f;
 	}
 
-	//// p3を求める
-	//Vector2 rotateCenter = FindRotateCenter();
-	//Vector2 p3 = rotateCenter - pos;			//posを基準としたローカル座標
+	if (angleVelocity == 0 && preAngle == angle)
+		return;
+	float rotateOfFrame = angle - preAngle;
 
-	//// 03 13 23を求める
-	//// 03 13 12を回転
-	//Vector2 rotateSubVerties[4];
-	//for (int i = 0; i < 4; i++)
-	//{
-	//	Vector2 subVerties[4];
-	//	subVerties[i] = verties[i].transform - p3;
-	//	rotateSubVerties[i] = RotateVector(subVerties[i], rotate);
-	//}
+	Matrix3x3 worldMat = MakeAffineMatrix({ 1.0f,1.0f }, angle, pos);
+	Matrix3x3 worldMatInv = Inverse(worldMat);
 
-	//// p3の逆ベクトル ip3 を回転 p3rとする
-	//Vector2 ip3 = p3 * -1.0f;
-	//Vector2 p3r = RotateVector(ip3, rotate);
-
-	//// p3の逆と p3rの差分ベクトル s をもとめる
-	//Vector2 subVec = p3r - ip3;
-
-	//// p3 + s de pos
-	//pos = pos + subVec;
-
-	//// p3+03たちでローカル座標へ変換
-	//p3 = rotateCenter - pos;
-	//for (int i = 0; i < 4; i++)
-	//{
-	//	verties[i].transform = p3 + rotateSubVerties[i];
-	//}
+	// p3を求める
+	Vector2 rotateCenter = FindRotateCenter();
+	Vector2 tp3 = Transform(rotateCenter, worldMatInv);
+	Vector2 p3 = rotateCenter - pos;
+	Vector2 ip3 = p3 * -1;
+	Vector2 rp3 = RotateVector(ip3, rotateOfFrame);
 
 
-	bool isSame = false;
+	Novice::DrawEllipse(static_cast<int>(pos.x + p3.x), static_cast<int>(pos.y + p3.y), 5, 5, 0, 0xaaaaaaaa, kFillModeSolid);
+
+
+	for (int i = 0; i < 4; i++)
+	{
+		verties[i].transform = RotateVector(verties[i].constTransform, angle);
+	}
+
+	Vector2 sub = rp3 - ip3;
+	Vector2 add = ip3 + sub;
+
+	pos = rotateCenter + add;
+
+
+
+	//pos = rotateCenter - p3 + sub;
+
+	/*bool isSame = false;
 	for (int i = 0; i < 4; i++)
 	{
 		verties[i].transform = RotateVector(verties[i].constTransform, rotate);
@@ -211,7 +217,7 @@ void Box::Rotate()
 	{
 		for (int i = 0; i < 4; i++)
 			verties[i].transform = { verties[i].constTransform.y,verties[i].constTransform.x };
-	}
+	}*/
 
 	//頂点基準に回転させた頂点たちを中心基準に戻す
 	//基準頂点から中心へのベクトルを計算，回転
@@ -240,7 +246,7 @@ void Box::CalculateCentroid()
 	centroid.x = centroid.x > size.x / 2.0f ? size.x / 2.0f : (centroid.x < -size.x / 2.0f ? -size.x / 2.0f : centroid.x);
 	centroid.y = centroid.y > size.y / 2.0f ? size.y / 2.0f : (centroid.y < -size.y / 2.0f ? -size.y / 2.0f : centroid.y);
 
-	centroid = RotateVector(centroid, rotate);
+	centroid = RotateVector(centroid, angle);
 
 	return;
 
@@ -341,15 +347,34 @@ void Box::SortVertexArray()
 
 Vector2 Box::FindRotateCenter()
 {
-	Vector2 min = { 0,(float)INFINITE };
+	Vector2 result = { 0,-(float)INFINITE };
+	std::vector< Vector2> yMax;
+
 	if (!hitPosWithField.empty())
 	{
 		for (Vector2 p : hitPosWithField)
 		{
-			if (min.y > p.y)
-				min = p;
+			if (result.y <= p.y)
+			{
+				result = p;
+				yMax.push_back(result);
+			}
 		}
-		return min;
+		for (const Vector2& v : yMax)
+		{
+			if (angleVelocity > 0 || angle - preAngle > 0)
+			{
+				if (result.x < v.x)
+					result = v;
+			}
+			else if (angleVelocity < 0 || angle - preAngle < 0)
+			{
+				if (result.x > v.x)
+					result = v;
+			}
+		}
+
+		return result;
 	}
 	else
 		return verties[3].transform + pos;
@@ -364,23 +389,23 @@ void Box::ShowImGui()
 	ImGui::SameLine();
 	if (ImGui::Button("Reset"))
 		velocity = { 0,0 };
-	ImGui::SliderAngle("angle", &rotate);
-	ImGui::DragFloat("angle_f", &rotate, 0.0001f);
-	ImGui::DragFloat("add", &addRotate, 0.001f);
+	ImGui::SliderAngle("angle", &angle);
+	ImGui::DragFloat("angle_f", &angle, 0.0001f);
+	ImGui::DragFloat("add", &angleVelocity, 0.001f);
 	if (ImGui::Button("ResetAngle"))
 	{
-		rotate = 0.0f;
-		addRotate = 0;
+		angle = 0.0f;
+		angleVelocity = 0.0f;
 	}
 	ImGui::SameLine();
 	if (ImGui::Button("180"))
-		rotate = (float)std::numbers::pi;
+		angle = (float)std::numbers::pi;
 	ImGui::SameLine();
 	if (ImGui::Button("90"))
-		rotate = 0.5f * (float)std::numbers::pi;
+		angle = 0.5f * (float)std::numbers::pi;
 	ImGui::SameLine();
-	if (ImGui::Button("85"))
-		rotate = 0.47f * (float)std::numbers::pi;
+	if (ImGui::Button("60"))
+		angle = 60.0f / 180.0f * (float)std::numbers::pi;
 	ImGui::Checkbox("Gravity", &isGravity);
 	ImGui::DragFloat("Weight", &verties[0].weight, 0.01f);
 	ImGui::DragFloat2("Size", &size.x, 0.01f);

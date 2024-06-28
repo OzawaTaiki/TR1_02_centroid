@@ -31,6 +31,8 @@ public:
 	void CollisonWithField();
 
 	void RegistHitPos(Vector2 _hitPos);
+	void HitPosClear() { hitPosWithField.clear(); };
+
 	///*************************************
 	///		ゲッター
 
@@ -68,7 +70,9 @@ private:
 	std::vector<Vector2> hitPosWithField;
 
 	//回転
-	float rotate;
+	float angle;
+	float preAngle;
+	float angleVelocity;
 	//重心座標
 	Vector2 centroid;
 	//全体での質量
@@ -77,7 +81,6 @@ private:
 	Verties verties[4]{};
 
 	Vector2 vectorOfStoV[4];
-	float addRotate = 0;
 
 
 };

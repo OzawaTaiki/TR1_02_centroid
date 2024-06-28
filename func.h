@@ -1,6 +1,7 @@
 #pragma once
 #include <Vector2.h>
 #include <cstdint>
+#include <Matrix3x3.h>
 
 float lerp(float& t, float max, float min);
 
@@ -40,6 +41,18 @@ Vector2 lerp(Vector2 min, Vector2 max, float t);
 
 void DrawAABB(int _xmin, int _ymin, int _xmax, int _ymax, uint32_t _color);
 
+
+
+Vector2 Transform(Vector2 vector, Matrix3x3 matrix);
+
+Matrix3x3 Inverse(Matrix3x3 matrix);
+
+
+Matrix3x3 MakeAffineMatrix(Vector2 scal, float rotate, Vector2 translate);
+Matrix3x3 Multiply(Matrix3x3 matrix1, Matrix3x3 matrix2);
+
 Vector2 operator+(const Vector2& _vector1, const Vector2& _vector2);
 Vector2 operator-(const Vector2& _vector1, const Vector2& _vector2);
 Vector2 operator*(const Vector2& _vector1, float _scalar);
+
+Matrix3x3 operator*(const Matrix3x3& _mat1, const Matrix3x3& _mat2);
