@@ -1,6 +1,7 @@
 #include "func.h"
 #include <cmath>
 #include <Novice.h>
+#include <cassert>
 
 float lerp(float& t, float max, float min)
 {
@@ -25,6 +26,70 @@ void DrawAABB(int _xmin, int _ymin, int _xmax, int _ymax, uint32_t _color)
 	Novice::DrawBox(_xmin, _ymin, lengthX, lengthY, 0, _color, kFillModeSolid);
 }
 
+Vector2 Transform(Vector2 vector, Matrix3x3 matrix)
+
+{
+	Vector2 result;
+	result.x = vector.x * matrix.m[0][0] + vector.y * matrix.m[1][0] + 1.0f * matrix.m[2][0];
+	result.y = vector.x * matrix.m[0][1] + vector.y * matrix.m[1][1] + 1.0f * matrix.m[2][1];
+	float w = vector.x * matrix.m[0][2] + vector.y * matrix.m[1][2] + 1.0f * matrix.m[2][2];
+	assert(w != 0.0f);
+	result.x /= w;
+	result.y /= w;
+	return result;
+};
+
+
+
+Matrix3x3 Inverse(Matrix3x3 matrix)
+{
+	Matrix3x3 result;
+
+	float denominator = matrix.m[0][0] * matrix.m[1][1] * matrix.m[2][2]
+		+ matrix.m[0][1] * matrix.m[1][2] * matrix.m[2][0]
+		+ matrix.m[0][2] * matrix.m[1][0] * matrix.m[2][1]
+		- matrix.m[0][2] * matrix.m[1][1] * matrix.m[2][0]
+		- matrix.m[0][1] * matrix.m[1][0] * matrix.m[2][2]
+		- matrix.m[0][0] * matrix.m[1][2] * matrix.m[2][1];
+
+
+	result.m[0][0] = 1.0f / denominator * (matrix.m[1][1] * matrix.m[2][2] - matrix.m[1][2] * matrix.m[2][1]);
+	result.m[0][1] = 1.0f / denominator * -(matrix.m[0][1] * matrix.m[2][2] - matrix.m[0][2] * matrix.m[2][1]);
+	result.m[0][2] = 1.0f / denominator * (matrix.m[0][1] * matrix.m[1][2] - matrix.m[0][2] * matrix.m[1][1]);
+	result.m[1][0] = 1.0f / denominator * -(matrix.m[1][0] * matrix.m[2][2] - matrix.m[1][2] * matrix.m[2][1]);
+	result.m[1][1] = 1.0f / denominator * (matrix.m[0][0] * matrix.m[2][2] - matrix.m[0][2] * matrix.m[2][0]);
+	result.m[1][2] = 1.0f / denominator * -(matrix.m[0][0] * matrix.m[1][2] - matrix.m[0][2] * matrix.m[1][0]);
+	result.m[2][0] = 1.0f / denominator * (matrix.m[1][0] * matrix.m[2][1] - matrix.m[1][1] * matrix.m[2][0]);
+	result.m[2][1] = 1.0f / denominator * -(matrix.m[0][0] * matrix.m[2][1] - matrix.m[0][1] * matrix.m[2][0]);
+	result.m[2][2] = 1.0f / denominator * (matrix.m[0][0] * matrix.m[1][1] - matrix.m[0][1] * matrix.m[1][0]);
+
+	return result;
+}
+
+
+Matrix3x3 MakeAffineMatrix(Vector2 scal, float rotate, Vector2 translate)
+{
+	Matrix3x3 result = { {
+		{scal.x * cosf(rotate),scal.x * sinf(rotate),0},
+		{-scal.y * sinf(rotate),scal.y * cosf(rotate),0},
+	 {translate.x,translate.y,1 }
+	}
+	};
+
+	return result;
+}
+
+Matrix3x3 Multiply(Matrix3x3 matrix1, Matrix3x3 matrix2)
+{
+	Matrix3x3 result;
+
+	for (int i = 0; i < 3; i++)
+		for (int j = 0; j < 3; j++)
+			result.m[i][j] = matrix1.m[i][0] * matrix2.m[0][j] + matrix1.m[i][1] * matrix2.m[1][j] + matrix1.m[i][2] * matrix2.m[2][j];
+
+	return result;
+}
+
 Vector2 operator+(const Vector2& _vector1, const Vector2& _vector2)
 {
 	return Vector2(Add(_vector2, _vector1));
@@ -38,6 +103,11 @@ Vector2 operator-(const Vector2& _vector1, const Vector2& _vector2)
 Vector2 operator*(const Vector2& _vector1, float _scalar)
 {
 	return Vector2(Multiply(_vector1, _scalar));
+}
+
+Matrix3x3 operator*(const Matrix3x3& _mat1, const Matrix3x3& _mat2)
+{
+	return Matrix3x3(Multiply(_mat1, _mat2));
 }
 
 Vector2 Bezier(const Vector2& p0, const Vector2& p1, const Vector2& p2, float t)
