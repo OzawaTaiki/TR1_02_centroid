@@ -40,6 +40,8 @@ public:
 	Vector2 GetSize() { return size; };
 	Vector2 GetVelocity() { return velocity; };
 	void GetVertiesTransform(Vector2 _verties[]);
+	void GetHitPos(std::vector<Vector2>& _pos);
+	Vector2 GetCentroid() { return centroid; };
 
 	///
 	///**************************************
@@ -50,6 +52,7 @@ private:
 	void Gravity();
 	void SortVertexArray();
 	Vector2 FindRotateCenter();
+	void ProcessCentroidInfluence();
 
 	void ShowImGui();
 

@@ -224,13 +224,12 @@ bool Mapchip::CheckCollision()
 						crossPos.y = afterPos.y + boxCenterToCross.y;
 						nBox->RegistHitPos(crossPos);
 
-
 					}
-
 				}
 			}
 
 		}
+
 	}
 	return false;
 

@@ -58,14 +58,16 @@ void Box::Initialize(const Vector2& _pos, const Vector2& _size)
 void Box::Update()
 {
 	preAngle = angle;
-	ShowImGui();
 	collisionDir = { 0,0 };
 
-	angle += angleVelocity;
+	ShowImGui();
+
 	if (isGravity)
 		Gravity();
-	Rotate();
+
 	CalculateCentroid();
+	ProcessCentroidInfluence();
+	Rotate();
 
 
 
@@ -162,8 +164,16 @@ void Box::GetVertiesTransform(Vector2 _verties[])
 	_verties[3] = verties[3].transform;
 }
 
+void Box::GetHitPos(std::vector<Vector2>& _pos)
+{
+	_pos = hitPosWithField;
+}
+
 void Box::Rotate()
 {
+
+	angle += angleVelocity;
+
 	if (angle >= 2.0f * (float)std::numbers::pi ||
 		angle <= -2.0f * (float)std::numbers::pi)
 	{
@@ -174,12 +184,8 @@ void Box::Rotate()
 		return;
 	float rotateOfFrame = angle - preAngle;
 
-	Matrix3x3 worldMat = MakeAffineMatrix({ 1.0f,1.0f }, angle, pos);
-	Matrix3x3 worldMatInv = Inverse(worldMat);
-
 	// p3を求める
 	Vector2 rotateCenter = FindRotateCenter();
-	Vector2 tp3 = Transform(rotateCenter, worldMatInv);
 	Vector2 p3 = rotateCenter - pos;
 	Vector2 ip3 = p3 * -1;
 	Vector2 rp3 = RotateVector(ip3, rotateOfFrame);
@@ -219,8 +225,6 @@ void Box::Rotate()
 			verties[i].transform = { verties[i].constTransform.y,verties[i].constTransform.x };
 	}*/
 
-	//頂点基準に回転させた頂点たちを中心基準に戻す
-	//基準頂点から中心へのベクトルを計算，回転
 
 	SortVertexArray();
 }
@@ -247,6 +251,9 @@ void Box::CalculateCentroid()
 	centroid.y = centroid.y > size.y / 2.0f ? size.y / 2.0f : (centroid.y < -size.y / 2.0f ? -size.y / 2.0f : centroid.y);
 
 	centroid = RotateVector(centroid, angle);
+
+
+
 
 	return;
 
@@ -377,20 +384,101 @@ Vector2 Box::FindRotateCenter()
 		return result;
 	}
 	else
-		return verties[3].transform + pos;
+	{
+		if (angleVelocity > 0 || angle - preAngle > 0)
+		{
+			return verties[3].transform + pos;
+		}
+		else if (angleVelocity < 0 || angle - preAngle < 0)
+		{
+			return verties[2].transform + pos;
+		}
+		else
+		{
+			return verties[3].transform + pos;
+		}
+	}
+
+}
+
+void Box::ProcessCentroidInfluence()
+{
+	//支持点が１つの場合
+	//それのどちらにあるか
+	//そちら側に傾く
+	//二つ以上の場合
+	//重心に近いほうをとる
+	//他点が同じ方向へあったら傾かない
+
+	if (hitPosWithField.empty())
+		return;
+	else if (hitPosWithField.size() == 1)
+	{
+		//支持点から重心座標へのベクトル
+		Vector2 direction = (pos + centroid) - hitPosWithField[0];
+
+		//支持点が重心より左
+		if (direction.x < 0)
+			angleVelocity -= 0.001f;
+		else if (direction.x > 0)
+			angleVelocity += 0.001f;
+	}
+
+	else if (hitPosWithField.size() >= 2)
+	{
+		angleVelocity *= 0.75f;
+		Vector2 nearPos = hitPosWithField[0];
+		for (int i = 1; i < hitPosWithField.size(); i++)
+		{
+			if (std::abs((pos.x + centroid.x) - nearPos.x) > std::abs((pos.x + centroid.x) - hitPosWithField[i].x))
+				nearPos = hitPosWithField[i];
+		}
+
+		Vector2 direction = (pos + centroid) - nearPos;
+
+		for (const Vector2& v : hitPosWithField)
+		{
+			if (v.x == nearPos.x && v.y == nearPos.y)
+				continue;
+
+			if (direction.x < 0 && (pos.x + centroid.x) - v.x > 0 ||
+				direction.x > 0 && (pos.x + centroid.x) - v.x < 0)
+			{
+				direction.x = 0;
+				break;
+			}
+		}
+
+		//支持点が重心より左
+		if (direction.x < 0)
+			angleVelocity -= 0.001f;
+		else if (direction.x > 0)
+			angleVelocity += 0.001f;
+	}
+
+	if (std::abs(angle) < 1.0e-5 || std::abs(angle - std::numbers::pi) < 1.0e-5)
+		angle = 0;
 
 }
 
 void Box::ShowImGui()
 {
+	float setAngle;
+
 	ImGui::Begin("Box");
 	ImGui::DragFloat2("position", &pos.x, 0.1f);
+	ImGui::SameLine();
+	if (ImGui::Button("PositoinReset"))
+		pos = { 256,128 };
 	ImGui::DragFloat2("Velocity", &velocity.x, 0.01f);
 	ImGui::SameLine();
-	if (ImGui::Button("Reset"))
+	if (ImGui::Button("VelocityReset"))
 		velocity = { 0,0 };
 	ImGui::SliderAngle("angle", &angle);
 	ImGui::DragFloat("angle_f", &angle, 0.0001f);
+	ImGui::Text("%.8f", angle - std::numbers::pi);
+	ImGui::SameLine();
+	ImGui::Text("%.8f", angle);
 	ImGui::DragFloat("add", &angleVelocity, 0.001f);
 	if (ImGui::Button("ResetAngle"))
 	{
