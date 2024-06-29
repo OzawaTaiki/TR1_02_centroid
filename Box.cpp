@@ -463,8 +463,6 @@ void Box::ProcessCentroidInfluence()
 
 void Box::ShowImGui()
 {
-	float setAngle;
-
 	ImGui::Begin("Box");
 	ImGui::DragFloat2("position", &pos.x, 0.1f);
 	ImGui::SameLine();
